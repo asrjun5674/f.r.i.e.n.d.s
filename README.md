@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Group Audio Chat Demo</title>
+<title>F.R.I.E.N.D.S Chat App</title>
 <style>
   body { font-family: Arial,sans-serif; margin:0; background:#1e1f22; color:#fff; }
   #loginPage, #chatPage { display:none; height:100vh; }
@@ -20,12 +20,15 @@
   #sidebar h3 { text-align:center; border-bottom:1px solid #444; padding-bottom:10px; }
   #main { flex:1; display:flex; flex-direction:column; }
   #messages { flex:1; padding:10px; overflow-y:auto; }
-  .msg { display:flex; align-items:center; margin:5px 0; padding:10px; border-radius:10px; background:#40444B; }
+  .msg { display:flex; align-items:center; margin:5px 0; padding:10px; border-radius:10px; background:#40444B; flex-wrap:wrap; }
   .msg img { width:35px; height:35px; border-radius:50%; margin-right:10px; object-fit:cover; }
   .msg .name { font-weight:bold; margin-right:5px; }
-  #inputArea { display:flex; padding:10px; background:#2b2d31; }
-  #inputArea input { flex:1; padding:10px; border:none; border-radius:5px; }
-  #inputArea button, #joinVoiceBtn, #leaveVoiceBtn { margin-left:10px; background:#5865F2; border:none; color:white; padding:10px 15px; border-radius:5px; cursor:pointer; }
+  #inputArea { display:flex; padding:10px; background:#2b2d31; flex-wrap:wrap; gap:5px; }
+  #inputArea input, #inputArea button, #inputArea label { padding:10px; border-radius:5px; border:none; cursor:pointer; }
+  #inputArea input { flex:1; }
+  #inputArea button, #inputArea label { background:#5865F2; color:white; }
+  .poll { background:#52555b; padding:10px; border-radius:8px; margin:5px 0; }
+  .poll button { margin:2px; background:#3b82f6; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -35,7 +38,7 @@
   <button class="user-btn Arjun" onclick="login('Arjun')">Arjun</button>
   <button class="user-btn Akshat" onclick="login('Akshat')">Akshat</button>
   <button class="user-btn Narain" onclick="login('Narain')">Narain</button>
-  <input type="file" id="uploadPicBtn" accept="image/*" />
+  <input type="file" id="uploadPicBtn" accept="image/*">
   <div class="note">Profile picture is optional.</div>
 </div>
 
@@ -44,12 +47,15 @@
     <h3 id="userName"></h3>
     <button id="joinVoiceBtn">Join Voice Chat</button>
     <button id="leaveVoiceBtn" disabled>Leave Voice Chat</button>
+    <input type="file" id="fileUploadBtn">
+    <button onclick="createPoll()">Create Poll</button>
   </div>
   <div id="main">
     <div id="messages"></div>
     <div id="inputArea">
       <input id="msgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMessage()">
       <button onclick="sendMessage()">Send</button>
+      <label for="fileUploadBtn">Send File</label>
     </div>
   </div>
 </div>
@@ -64,6 +70,7 @@ const loginPage = document.getElementById('loginPage');
 const chatPage = document.getElementById('chatPage');
 const messagesDiv = document.getElementById('messages');
 const uploadPicBtn = document.getElementById('uploadPicBtn');
+const fileUploadBtn = document.getElementById('fileUploadBtn');
 const joinVoiceBtn = document.getElementById('joinVoiceBtn');
 const leaveVoiceBtn = document.getElementById('leaveVoiceBtn');
 
@@ -92,7 +99,19 @@ uploadPicBtn.addEventListener('change', e=>{
   }
 });
 
-// Send message
+fileUploadBtn.addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = function(evt){
+      chatHistory.push({user:currentUser,file:{name:file.name,data:evt.target.result}});
+      localStorage.setItem('groupChat', JSON.stringify(chatHistory));
+      loadMessages();
+    }
+    reader.readAsDataURL(file);
+  }
+});
+
 function sendMessage(){
   const input = document.getElementById('msgInput');
   const text = input.value.trim();
@@ -103,10 +122,26 @@ function sendMessage(){
   loadMessages();
 }
 
-// Load messages
+function createPoll(){
+  const question = prompt('Enter poll question:');
+  if(!question) return;
+  const options = prompt('Enter options separated by comma:');
+  if(!options) return;
+  const opts = options.split(',').map(o=>({option:o.trim(),votes:0}));
+  chatHistory.push({user:currentUser,poll:{question,options:opts}});
+  localStorage.setItem('groupChat', JSON.stringify(chatHistory));
+  loadMessages();
+}
+
+function votePoll(index,optIndex){
+  chatHistory[index].poll.options[optIndex].votes++;
+  localStorage.setItem('groupChat', JSON.stringify(chatHistory));
+  loadMessages();
+}
+
 function loadMessages(){
   messagesDiv.innerHTML='';
-  chatHistory.forEach(m=>{
+  chatHistory.forEach((m,i)=>{
     const div = document.createElement('div');
     div.className='msg';
     const img = document.createElement('img');
@@ -117,20 +152,42 @@ function loadMessages(){
     nameSpan.className='name';
     nameSpan.style.color = colors[m.user];
     div.appendChild(nameSpan);
-    div.appendChild(document.createTextNode(m.text));
+    if(m.text) div.appendChild(document.createTextNode(m.text));
+    if(m.file){
+      const link = document.createElement('a');
+      link.href = m.file.data;
+      link.download = m.file.name;
+      link.textContent = '[File] '+m.file.name;
+      link.style.color='lightblue';
+      link.style.marginLeft='5px';
+      div.appendChild(link);
+    }
+    if(m.poll){
+      const pollDiv = document.createElement('div');
+      pollDiv.className='poll';
+      const q = document.createElement('div');
+      q.textContent = 'Poll: '+m.poll.question;
+      pollDiv.appendChild(q);
+      m.poll.options.forEach((o,oi)=>{
+        const btn = document.createElement('button');
+        btn.textContent = `${o.option} (${o.votes})`;
+        btn.onclick = ()=>votePoll(i,oi);
+        pollDiv.appendChild(btn);
+      });
+      div.appendChild(pollDiv);
+    }
     messagesDiv.appendChild(div);
   });
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// Update messages between tabs
 window.addEventListener('storage', ()=>{
   chatHistory = JSON.parse(localStorage.getItem('groupChat')) || [];
   userPics = JSON.parse(localStorage.getItem('userPics')) || {};
   loadMessages();
 });
 
-// Live voice chat (basic WebRTC demo)
+// Live voice chat
 let localStream=null;
 let pc=null;
 
@@ -154,8 +211,9 @@ joinVoiceBtn.addEventListener('click', async ()=>{
 });
 
 leaveVoiceBtn.addEventListener('click', ()=>{
-  if(localStream) localStream.getTracks().forEach(t=>t.stop());
-  if(pc) pc.close();
+  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
+  if(pc){ pc.close(); pc=null; }
+  document.querySelectorAll('audio').forEach(a=>a.remove());
   joinVoiceBtn.disabled=false;
   leaveVoiceBtn.disabled=true;
 });
