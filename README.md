@@ -3,34 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>F.R.I.E.N.D.S Chat App</title>
+<title>F.R.I.E.N.D.S Chat</title>
 <style>
-  body { font-family: Arial,sans-serif; margin:0; background:#1e1f22; color:#fff; }
-  #loginPage, #chatPage { display:none; height:100vh; }
-  #loginPage { display:flex; flex-direction:column; justify-content:center; align-items:center; }
-  .user-btn { border:none; color:#fff; padding:15px 25px; margin:10px; border-radius:10px; font-size:18px; cursor:pointer; transition:0.2s; }
-  .user-btn.Arjun { background:#facc15; color:#000; }
-  .user-btn.Arjun:hover { background:#eab308; }
-  .user-btn.Akshat { background:#ef4444; }
-  .user-btn.Akshat:hover { background:#dc2626; }
-  .user-btn.Narain { background:#3b82f6; }
-  .user-btn.Narain:hover { background:#2563eb; }
-  #chatPage { display:flex; }
-  #sidebar { width:250px; background:#2b2d31; display:flex; flex-direction:column; padding:10px; align-items:center; }
-  #sidebar h3 { text-align:center; border-bottom:1px solid #444; padding-bottom:10px; width:100%; }
-  #sidebar img { width:80px; height:80px; border-radius:50%; margin-bottom:10px; object-fit:cover; border:3px solid #444; }
-  #sidebar button, #sidebar input, #sidebar label { width:90%; margin:5px 0; border:none; border-radius:5px; padding:10px; cursor:pointer; background:#5865F2; color:white; }
-  #main { flex:1; display:flex; flex-direction:column; }
-  #messages { flex:1; padding:10px; overflow-y:auto; }
-  .msg { display:flex; align-items:center; margin:5px 0; padding:10px; border-radius:10px; background:#40444B; flex-wrap:wrap; }
-  .msg img { width:35px; height:35px; border-radius:50%; margin-right:10px; object-fit:cover; }
-  .msg .name { font-weight:bold; margin-right:5px; }
-  #inputArea { display:flex; padding:10px; background:#2b2d31; flex-wrap:wrap; gap:5px; }
-  #inputArea input, #inputArea button, #inputArea label { padding:10px; border-radius:5px; border:none; cursor:pointer; }
-  #inputArea input { flex:1; }
-  #inputArea button, #inputArea label { background:#5865F2; color:white; }
-  .poll { background:#52555b; padding:10px; border-radius:8px; margin:5px 0; width:100%; }
-  .poll button { margin:2px; background:#3b82f6; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer; }
+body { margin:0; font-family: Arial,sans-serif; background:#1e1f22; color:#fff; }
+#loginPage, #chatPage { display:none; height:100vh; }
+#loginPage { display:flex; flex-direction:column; justify-content:center; align-items:center; }
+.user-btn { border:none; color:#fff; padding:15px 25px; margin:10px; border-radius:10px; font-size:18px; cursor:pointer; transition:0.2s; }
+.user-btn.Arjun { background:#facc15; color:#000; }
+.user-btn.Arjun:hover { background:#eab308; }
+.user-btn.Akshat { background:#ef4444; }
+.user-btn.Akshat:hover { background:#dc2626; }
+.user-btn.Narain { background:#3b82f6; }
+.user-btn.Narain:hover { background:#2563eb; }
+#chatPage { display:flex; height:100vh; }
+#sidebar { width:250px; background:#2b2d31; display:flex; flex-direction:column; padding:10px; align-items:center; }
+#sidebar h3 { text-align:center; border-bottom:1px solid #444; padding-bottom:10px; width:100%; }
+#sidebar img { width:80px; height:80px; border-radius:50%; margin-bottom:10px; object-fit:cover; border:3px solid #444; }
+#sidebar button, #sidebar input, #sidebar label { width:90%; margin:5px 0; border:none; border-radius:5px; padding:10px; cursor:pointer; background:#5865F2; color:white; }
+#main { flex:1; display:flex; flex-direction:column; }
+#messages { flex:1; padding:10px; overflow-y:auto; }
+.msg { display:flex; align-items:center; margin:5px 0; padding:10px; border-radius:10px; background:#40444B; flex-wrap:wrap; }
+.msg img { width:35px; height:35px; border-radius:50%; margin-right:10px; object-fit:cover; }
+.msg .name { font-weight:bold; margin-right:5px; }
+#inputArea { display:flex; padding:10px; background:#2b2d31; flex-wrap:wrap; gap:5px; }
+#inputArea input, #inputArea button, #inputArea label { padding:10px; border-radius:5px; border:none; cursor:pointer; }
+#inputArea input { flex:1; }
+#inputArea button, #inputArea label { background:#5865F2; color:white; }
+.poll { background:#52555b; padding:10px; border-radius:8px; margin:5px 0; width:100%; }
+.poll button { margin:2px; background:#3b82f6; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -207,37 +207,6 @@ window.addEventListener('storage', ()=>{
   chatHistory = JSON.parse(localStorage.getItem('groupChat')) || [];
   userPics = JSON.parse(localStorage.getItem('userPics')) || {};
   loadMessages();
-});
-
-// Voice Chat (local only)
-let localStream=null;
-let pc=null;
-
-joinVoiceBtn.addEventListener('click', async ()=>{
-  try{
-    localStream = await navigator.mediaDevices.getUserMedia({audio:true});
-    pc = new RTCPeerConnection();
-    localStream.getTracks().forEach(t=>pc.addTrack(t, localStream));
-    pc.ontrack = e=>{
-      const audio = document.createElement('audio');
-      audio.srcObject = e.streams[0];
-      audio.autoplay = true;
-      document.body.appendChild(audio);
-    };
-    joinVoiceBtn.disabled=true;
-    leaveVoiceBtn.disabled=false;
-    alert('Voice chat started. Open multiple tabs to simulate group voice chat.');
-  }catch(err){
-    alert('Microphone access denied or error: '+err.message);
-  }
-});
-
-leaveVoiceBtn.addEventListener('click', ()=>{
-  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
-  if(pc){ pc.close(); pc=null; }
-  document.querySelectorAll('audio').forEach(a=>a.remove());
-  joinVoiceBtn.disabled=false;
-  leaveVoiceBtn.disabled=true;
 });
 </script>
 </body>
