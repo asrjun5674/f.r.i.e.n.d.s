@@ -35,11 +35,6 @@ body { margin:0; font-family: Arial,sans-serif; background:#1e1f22; color:#fff; 
 </head>
 <body>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-
 <div id="loginPage">
   <h1>Login as:</h1>
   <button class="user-btn Arjun" onclick="login('Arjun')">Arjun</button>
@@ -71,21 +66,9 @@ body { margin:0; font-family: Arial,sans-serif; background:#1e1f22; color:#fff; 
 </div>
 
 <script>
-// Initialize Firebase
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "XXXX",
-  appId: "XXXX"
-};
-firebase.initializeApp(firebaseConfig);
-
 let currentUser = null;
-let chatHistory = [];
-let userPics = {};
+let chatHistory = JSON.parse(localStorage.getItem('groupChat')) || [];
+let userPics = JSON.parse(localStorage.getItem('userPics')) || {};
 const colors = { Arjun:'#facc15', Akshat:'#ef4444', Narain:'#3b82f6' };
 
 const loginPage = document.getElementById('loginPage');
@@ -94,79 +77,73 @@ const messagesDiv = document.getElementById('messages');
 const uploadPicBtn = document.getElementById('uploadPicBtn');
 const changePicBtn = document.getElementById('changePicBtn');
 const fileUploadBtn = document.getElementById('fileUploadBtn');
+const joinVoiceBtn = document.getElementById('joinVoiceBtn');
+const leaveVoiceBtn = document.getElementById('leaveVoiceBtn');
 const profilePicElem = document.getElementById('profilePic');
-
-// Firebase references
-const chatRef = firebase.database().ref('groupChat');
-const picsRef = firebase.database().ref('userPics');
 
 function login(name){
   currentUser = name;
   loginPage.style.display='none';
   chatPage.style.display='flex';
-  document.getElementById('userName').textContent = name;
-  document.getElementById('userName').style.color = colors[name];
+  const userNameElem = document.getElementById('userName');
+  userNameElem.textContent = name;
+  userNameElem.style.color = colors[name];
   profilePicElem.src = userPics[currentUser] || 'https://via.placeholder.com/80';
   loadMessages();
 }
 
-// Load data from Firebase
-chatRef.on('value', snapshot=>{
-  chatHistory = snapshot.val() || [];
-  loadMessages();
-});
-
-picsRef.on('value', snapshot=>{
-  userPics = snapshot.val() || {};
-  if(currentUser) profilePicElem.src = userPics[currentUser] || 'https://via.placeholder.com/80';
-  loadMessages();
-});
-
-// Upload / Change profile picture
-function uploadProfile(file){
-  const reader = new FileReader();
-  reader.onload = evt=>{
-    userPics[currentUser] = evt.target.result;
-    picsRef.set(userPics);
-    profilePicElem.src = evt.target.result;
-    loadMessages();
-  };
-  reader.readAsDataURL(file);
-}
-
+// upload profile picture (first time)
 uploadPicBtn.addEventListener('change', e=>{
-  if(e.target.files[0]) uploadProfile(e.target.files[0]);
-});
-changePicBtn.addEventListener('change', e=>{
-  if(e.target.files[0]) uploadProfile(e.target.files[0]);
-});
-
-// Send message
-function sendMessage(){
-  const input = document.getElementById('msgInput');
-  const text = input.value.trim();
-  if(!text) return;
-  chatHistory.push({user:currentUser,text});
-  chatRef.set(chatHistory);
-  input.value='';
-  loadMessages();
-}
-
-// Send file
-fileUploadBtn.addEventListener('change', e=>{
   const file = e.target.files[0];
   if(file){
     const reader = new FileReader();
     reader.onload = evt=>{
-      chatHistory.push({user:currentUser,file:{name:file.name,data:evt.target.result}});
-      chatRef.set(chatHistory);
+      userPics[currentUser] = evt.target.result;
+      localStorage.setItem('userPics', JSON.stringify(userPics));
+      alert('Profile picture saved!');
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// change picture inside chat
+changePicBtn.addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = evt=>{
+      userPics[currentUser] = evt.target.result;
+      localStorage.setItem('userPics', JSON.stringify(userPics));
+      profilePicElem.src = evt.target.result;
       loadMessages();
     };
     reader.readAsDataURL(file);
   }
 });
 
-// Polls
+fileUploadBtn.addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = evt=>{
+      chatHistory.push({user:currentUser,file:{name:file.name,data:evt.target.result}});
+      localStorage.setItem('groupChat', JSON.stringify(chatHistory));
+      loadMessages();
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+function sendMessage(){
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if(!text) return;
+  chatHistory.push({user:currentUser,text});
+  localStorage.setItem('groupChat', JSON.stringify(chatHistory));
+  input.value='';
+  loadMessages();
+}
+
 function createPoll(){
   const question = prompt('Enter poll question:');
   if(!question) return;
@@ -174,17 +151,16 @@ function createPoll(){
   if(!options) return;
   const opts = options.split(',').map(o=>({option:o.trim(),votes:0}));
   chatHistory.push({user:currentUser,poll:{question,options:opts}});
-  chatRef.set(chatHistory);
+  localStorage.setItem('groupChat', JSON.stringify(chatHistory));
   loadMessages();
 }
 
 function votePoll(index,optIndex){
   chatHistory[index].poll.options[optIndex].votes++;
-  chatRef.set(chatHistory);
+  localStorage.setItem('groupChat', JSON.stringify(chatHistory));
   loadMessages();
 }
 
-// Render messages
 function loadMessages(){
   messagesDiv.innerHTML='';
   chatHistory.forEach((m,i)=>{
@@ -226,6 +202,12 @@ function loadMessages(){
   });
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
+
+window.addEventListener('storage', ()=>{
+  chatHistory = JSON.parse(localStorage.getItem('groupChat')) || [];
+  userPics = JSON.parse(localStorage.getItem('userPics')) || {};
+  loadMessages();
+});
 </script>
 </body>
 </html>
