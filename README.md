@@ -16,8 +16,10 @@
   .user-btn.Narain { background:#3b82f6; }
   .user-btn.Narain:hover { background:#2563eb; }
   #chatPage { display:flex; }
-  #sidebar { width:220px; background:#2b2d31; display:flex; flex-direction:column; padding:10px; }
-  #sidebar h3 { text-align:center; border-bottom:1px solid #444; padding-bottom:10px; }
+  #sidebar { width:250px; background:#2b2d31; display:flex; flex-direction:column; padding:10px; align-items:center; }
+  #sidebar h3 { text-align:center; border-bottom:1px solid #444; padding-bottom:10px; width:100%; }
+  #sidebar img { width:80px; height:80px; border-radius:50%; margin-bottom:10px; object-fit:cover; border:3px solid #444; }
+  #sidebar button, #sidebar input, #sidebar label { width:90%; margin:5px 0; border:none; border-radius:5px; padding:10px; cursor:pointer; background:#5865F2; color:white; }
   #main { flex:1; display:flex; flex-direction:column; }
   #messages { flex:1; padding:10px; overflow-y:auto; }
   .msg { display:flex; align-items:center; margin:5px 0; padding:10px; border-radius:10px; background:#40444B; flex-wrap:wrap; }
@@ -27,7 +29,7 @@
   #inputArea input, #inputArea button, #inputArea label { padding:10px; border-radius:5px; border:none; cursor:pointer; }
   #inputArea input { flex:1; }
   #inputArea button, #inputArea label { background:#5865F2; color:white; }
-  .poll { background:#52555b; padding:10px; border-radius:8px; margin:5px 0; }
+  .poll { background:#52555b; padding:10px; border-radius:8px; margin:5px 0; width:100%; }
   .poll button { margin:2px; background:#3b82f6; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer; }
 </style>
 </head>
@@ -44,7 +46,10 @@
 
 <div id="chatPage">
   <div id="sidebar">
+    <img id="profilePic" src="https://via.placeholder.com/80">
     <h3 id="userName"></h3>
+    <label for="changePicBtn">Change Picture</label>
+    <input type="file" id="changePicBtn" accept="image/*" style="display:none">
     <button id="joinVoiceBtn">Join Voice Chat</button>
     <button id="leaveVoiceBtn" disabled>Leave Voice Chat</button>
     <input type="file" id="fileUploadBtn">
@@ -70,9 +75,11 @@ const loginPage = document.getElementById('loginPage');
 const chatPage = document.getElementById('chatPage');
 const messagesDiv = document.getElementById('messages');
 const uploadPicBtn = document.getElementById('uploadPicBtn');
+const changePicBtn = document.getElementById('changePicBtn');
 const fileUploadBtn = document.getElementById('fileUploadBtn');
 const joinVoiceBtn = document.getElementById('joinVoiceBtn');
 const leaveVoiceBtn = document.getElementById('leaveVoiceBtn');
+const profilePicElem = document.getElementById('profilePic');
 
 function login(name){
   currentUser = name;
@@ -81,20 +88,35 @@ function login(name){
   const userNameElem = document.getElementById('userName');
   userNameElem.textContent = name;
   userNameElem.style.color = colors[name];
-  if(userPics[currentUser]) uploadPicBtn.disabled = true;
+  profilePicElem.src = userPics[currentUser] || 'https://via.placeholder.com/80';
   loadMessages();
 }
 
+// upload profile picture (first time)
 uploadPicBtn.addEventListener('change', e=>{
   const file = e.target.files[0];
   if(file){
     const reader = new FileReader();
-    reader.onload = function(evt){
+    reader.onload = evt=>{
       userPics[currentUser] = evt.target.result;
       localStorage.setItem('userPics', JSON.stringify(userPics));
-      uploadPicBtn.disabled=true;
+      alert('Profile picture saved!');
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// change picture inside chat
+changePicBtn.addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = evt=>{
+      userPics[currentUser] = evt.target.result;
+      localStorage.setItem('userPics', JSON.stringify(userPics));
+      profilePicElem.src = evt.target.result;
       loadMessages();
-    }
+    };
     reader.readAsDataURL(file);
   }
 });
@@ -103,11 +125,11 @@ fileUploadBtn.addEventListener('change', e=>{
   const file = e.target.files[0];
   if(file){
     const reader = new FileReader();
-    reader.onload = function(evt){
+    reader.onload = evt=>{
       chatHistory.push({user:currentUser,file:{name:file.name,data:evt.target.result}});
       localStorage.setItem('groupChat', JSON.stringify(chatHistory));
       loadMessages();
-    }
+    };
     reader.readAsDataURL(file);
   }
 });
@@ -187,7 +209,7 @@ window.addEventListener('storage', ()=>{
   loadMessages();
 });
 
-// Live voice chat
+// Voice Chat (local only)
 let localStream=null;
 let pc=null;
 
@@ -218,6 +240,5 @@ leaveVoiceBtn.addEventListener('click', ()=>{
   leaveVoiceBtn.disabled=true;
 });
 </script>
-
 </body>
 </html>
